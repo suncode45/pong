@@ -1,0 +1,1 @@
+gcc main.c -o main.exe -LC:/Users/kevin/Downloads/raylib-5.0_win64_mingw-w64/raylib-5.0_win64_mingw-w64/lib -IC:/Users/kevin/Downloads/raylib-5.0_win64_mingw-w64/raylib-5.0_win64_mingw-w64/include -lraylib -lopengl32 -lgdi32 -lwinmm
