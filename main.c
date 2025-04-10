@@ -28,10 +28,28 @@
 ********************************************************************************************/
 
 #include "raylib.h"
+#define semicolon ;
+#define is =
+#define equals ==
+#define notequal !=
+#define not !
+#define zero 0
+#define one 1
+#define two 2
+#define three 3
+#define four 4
+#define pointer *
+#define integer int
+#define constant const
 
-double rng(void)
+double rng()
 {
-    return (double)rand()/(RAND_MAX+1.0);
+    return (double)(rand())/RAND_MAX;
+}
+
+double square(double x)
+{
+    return x * x;
 }
 
 //------------------------------------------------------------------------------------
@@ -41,12 +59,18 @@ int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
+    const int STEPS_PER_FRAME = 3;
+    
     const int screenWidth = 800;
     const int screenHeight = 450;
+    int aiDifficulty = 4;
     double ball_radius = 20;
+    double bonus_radius = 20;
     double ball_x = screenWidth / 2;
     double ball_y = screenHeight / 2;
-    double ball_speed = 2.5;
+    double bonus_x = screenWidth / 2;
+    double bonus_y = screenHeight / 2;
+    double ball_speed = 4 / STEPS_PER_FRAME;
     double ball_xv = ball_speed;
     double ball_yv = ball_speed;
 
@@ -54,20 +78,25 @@ int main(void)
     paddle1.x = 32;
     paddle1.y = 0;
     paddle1.width = 10;
-    paddle1.height = 125;
+    paddle1.height = 80;
     int paddle_speed = 5;
+    int outcome = 0;
 
     Rectangle paddle2;
-    paddle2.x = screenWidth - 32 - 10;
     paddle2.y = 0;
     paddle2.width = 10;
-    paddle2.height = 125;
+    paddle2.x = screenWidth - 32 - paddle2.width;
+    paddle2.height = 80;
+
+    double ai_target_y = 0;
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per
     int frameCount = 0;
     int score = 0;
+    int enemy_score = 0;
+
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -84,52 +113,75 @@ int main(void)
 
             ClearBackground(BLACK);
             char my_string[256];
-            sprintf(&my_string[0], "%d", score);
+            sprintf(&my_string[0], "%d - %d", score, enemy_score);
+
+
 
             frameCount++;
+            if (outcome == 0) {
+                for (int i = 0; i < STEPS_PER_FRAME; i++){
 
-            ball_x += ball_xv;
-            ball_y += ball_yv;
+                    ball_x += ball_xv;
+                    ball_y += ball_yv;
 
-            if (paddle2.y < ball_y - paddle2.height / 2) {
-                paddle2.y += paddle_speed;
-            }
-
-            if (paddle2.y > ball_y - paddle2.height / 2) {
-                paddle2.y -= paddle_speed;
-            }
-
-            if (ball_x < ball_radius){
-                //
-            }
-            if (ball_x < ball_radius+paddle1.x+paddle1.width && ball_x > ball_radius+paddle1.x && abs((paddle1.y+paddle1.height/2) - (ball_y)) < (paddle1.height / 2 + ball_radius/2)){
-                ball_speed += 0.125;
-                ball_xv = ball_speed;
-                if (score % 2 == 0){
-                    paddle1.height -= 1;
-                    paddle1.y += (int)(rng()+0.5);
+                    if (ball_x < ball_radius+paddle1.x+paddle1.width && ball_x > ball_radius+paddle1.x && abs((paddle1.y+paddle1.height/2) - (ball_y)) < (paddle1.height / 2 + ball_radius)){
+                        ball_speed += 0.09375 / STEPS_PER_FRAME;
+                        ball_xv = ball_speed;
+                        ball_yv = -2.4 * ((paddle1.y+paddle1.height/2) - (ball_y))/(paddle1.height) * ball_speed;
+                        score += 2;
+                        ball_x = ball_radius+paddle1.x+paddle1.width + ball_xv;
+                    }
+                    if (ball_x + ball_radius > paddle2.x && ball_x + ball_radius < paddle2.x + paddle2.width && abs((paddle2.y+paddle2.height/2) - (ball_y)) < (paddle2.height / 2 + ball_radius)){
+                        ball_speed += 0.09375 / STEPS_PER_FRAME;
+                        ball_xv = -ball_speed;
+                        ball_yv = -2.4 * ((paddle2.y+paddle2.height/2) - (ball_y))/(paddle2.height) * ball_speed;
+                        enemy_score += 2;
+                        ball_x = paddle2.x - ball_radius - ball_xv;
+                    }
+                    if (ball_y < ball_radius){
+                        ball_yv *= -1;
+                        ball_y = ball_radius + ball_speed;
+                    }
+                    if (ball_y + ball_radius > screenHeight){
+                        ball_yv *= -1;
+                        ball_y = screenHeight - ball_radius - ball_speed;
+                    }
+                    if (sqrt(square(ball_x - bonus_x) + square(ball_y - bonus_y)) < (ball_radius + bonus_radius)){
+                        if (ball_xv > 0){
+                            score += 3;
+                        } else {
+                            enemy_score += 3;
+                        }
+                        bonus_x = (((rng() + 0.5) * screenWidth) / 2);
+                        bonus_y = bonus_radius + rng() * (screenHeight - (bonus_radius * 2));
+                    }
+                    if (ball_x < ball_radius * -1){
+                        ball_x = screenWidth / 2;
+                        ball_y = screenHeight / 2;
+                        ball_xv /= 2;
+                        ball_yv = 0;
+                        enemy_score += 10;
+                    }
+                    if (ball_x > screenWidth + ball_radius){
+                        ball_x = screenWidth / 2;
+                        ball_y = screenHeight / 2;
+                        ball_xv /= 2;
+                        ball_yv = 0;
+                        score += 10;
+                    }
+                    if (score >= 100){
+                        outcome = 1;
+                    } else if (enemy_score >= 100){
+                        outcome = -1;
+                    }
                 }
-                ball_yv = -1.6 * ((paddle1.y+paddle1.height/2) - (ball_y))/(paddle1.height) * ball_speed;
-                score += 1;
-                ball_x = ball_radius+paddle1.x+paddle1.width + ball_xv;
-            }
-            if (ball_x + ball_radius > paddle2.x && ball_x + ball_radius < paddle2.x + paddle2.width && abs((paddle2.y+paddle2.height/2) - (ball_y)) < (paddle2.height / 2 + ball_radius/2)){
-                ball_speed += 0.125;
-                ball_xv = -ball_speed;
-                if (score % 2 == 0){
-                    paddle2.height -= 1;
-                    paddle2.y += (int)(rng()+0.5);
+            } else {
+                if (outcome == -1){
+                    // ClearBackground(frameCount % 2 == 0 ? BLACK : RAYWHITE);
+                    sprintf(&my_string[0], "You lose! (no!)");
+                } else {
+                    sprintf(&my_string[0], "You win! (yay!)");
                 }
-                ball_yv = -1.6 * ((paddle2.y+paddle2.height/2) - (ball_y))/(paddle2.height * 1.6) * ball_speed;
-                ball_x = paddle2.x - ball_radius - ball_xv;
-            }
-            if (ball_y < ball_radius){
-                ball_yv *= -1;
-                ball_y += ball_yv;
-            }
-            if (ball_y + ball_radius > screenHeight){
-                ball_yv *= -1;
-                ball_y += ball_yv;
             }
 
             if(IsKeyDown(KEY_UP)){
@@ -139,11 +191,52 @@ int main(void)
                 paddle1.y += paddle_speed;
             }
 
+            ai_target_y = ball_y;
+            {
+                double ai_active_factor = 0.65;
+
+                if (aiDifficulty > 2 && abs(ball_xv) > 4) {
+                    ai_active_factor = 0.5;
+                }
+
+                ai_target_y = ball_y;
+
+                // if (paddle2.y < (ai_target_y - paddle2.height / 2)) {
+                //     paddle2.y += paddle_speed;
+                // }
+                // if (paddle2.y > (ai_target_y - paddle2.height / 2)) {
+                //     paddle2.y -= paddle_speed;
+                // }
+                
+                if (ball_x > screenWidth * ai_active_factor) {
+                    ai_target_y += paddle2.height * (ai_target_y - bonus_y)/(paddle2.x - bonus_x)/2.4;
+                    if (aiDifficulty > 3){
+                        if ((ai_target_y - bonus_y)/(paddle2.x - bonus_x)/2.4 > 0.25) {
+                            ai_target_y = ball_y + (paddle2.height * (ai_target_y - bonus_y)/(paddle2.x - bonus_x)/4.8);
+                        }
+                    }
+                }
+                if (ball_x < screenWidth * ai_active_factor && ball_x > screenWidth * 1 / 3) {
+                    if (aiDifficulty > 3){
+                        ai_target_y = ball_y + ball_yv * 15;
+                    }
+                }
+                else {
+                    if (paddle2.y < (ai_target_y - paddle2.height / 2)) {
+                        paddle2.y += paddle_speed;
+                    }
+                    if (paddle2.y > (ai_target_y - paddle2.height / 2)) {
+                        paddle2.y -= paddle_speed;
+                    }
+                }
+            }
+
             DrawRectangleRec(paddle1, (Color) { 65, 175, 249, 255 });
             DrawRectangleRec(paddle2, (Color) { 253, 0, 0, 255 });
 
             DrawText(my_string, 2, 0, 21, RAYWHITE);
             DrawCircle(ball_x,ball_y,ball_radius,GREEN);
+            DrawCircle(bonus_x,bonus_y,bonus_radius,YELLOW);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
